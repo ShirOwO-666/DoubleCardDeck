@@ -65,6 +65,9 @@ public class HandManager : MonoBehaviour
     {
         if (cardUIPrefab == null || handRoot == null) return;
 
+        // 清理一遍旧幽灵
+        spawnedCards.RemoveAll(item => item == null);
+
         GameObject go = Instantiate(cardUIPrefab, handRoot);
         go.transform.localScale = handCardScale;
 
@@ -81,11 +84,21 @@ public class HandManager : MonoBehaviour
         int count = spawnedCards.Count;
         if (count == 0) return;
 
+        // 清理掉已经被销毁（幽灵）的卡牌引用
+        spawnedCards.RemoveAll(item => item == null);
+
+        // 重新获取数量（因为可能清理掉了一些）
+        count = spawnedCards.Count;
+        if (count == 0) return;
+
         float totalAngle = angleStep * (count - 1);
         float startAngle = -totalAngle / 2f;
 
         for (int i = 0; i < count; i++)
         {
+            // 双重保险：如果又被销毁了，直接跳过
+            if (spawnedCards[i] == null) continue;
+
             float angle = startAngle + angleStep * i;
             float rad = angle * Mathf.Deg2Rad;
 
@@ -93,6 +106,8 @@ public class HandManager : MonoBehaviour
             float y = Mathf.Cos(rad) * radius - radius + heightOffset;
 
             RectTransform rt = spawnedCards[i].GetComponent<RectTransform>();
+            if (rt == null) continue; // 防御性编程
+
             Vector2 pos = new Vector2(x, y);
             rt.anchoredPosition = pos;
             rt.localRotation = Quaternion.Euler(0, 0, -angle);
