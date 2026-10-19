@@ -10,15 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 79ebb5fef44d8cd4f8f11b1007a0a8be, type: 3}
-  m_Name: chong1
+  m_Name: gs
   m_EditorClassIdentifier: 
   cardId: 1
-  cardName: chong
-  faction: 1
-  cost: 1
+  cardName: gs
+  faction: 2
+  cost: 0
+  attack: 1
+  health: 1
   artwork: {fileID: 0}
   plantBackground: {fileID: 0}
-  bugBackground: {fileID: 21300000, guid: 801b3443f58cc634f91ddc67f2af8775, type: 3}
+  bugBackground: {fileID: 0}
+  plantBackgroundTexture: {fileID: 0}
+  bugBackgroundTexture: {fileID: 0}
   description: 
   baseDamage: 0
   baseHeal: 0

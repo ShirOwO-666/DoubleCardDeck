@@ -16,9 +16,15 @@ MonoBehaviour:
   cardName: zhiw
   faction: 0
   cost: 1
+  attack: 1
+  health: 1
   artwork: {fileID: 0}
   plantBackground: {fileID: 21300000, guid: 7be14efcf4031ca479eb302a08d16a61, type: 3}
-  bugBackground: {fileID: 0}
+  bugBackground: {fileID: 21300000, guid: 801b3443f58cc634f91ddc67f2af8775, type: 3}
+  plantBackgroundTexture: {fileID: 2800000, guid: 7be14efcf4031ca479eb302a08d16a61,
+    type: 3}
+  bugBackgroundTexture: {fileID: 2800000, guid: 801b3443f58cc634f91ddc67f2af8775,
+    type: 3}
   description: 
   baseDamage: 0
   baseHeal: 0

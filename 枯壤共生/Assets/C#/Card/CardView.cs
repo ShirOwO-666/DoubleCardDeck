@@ -35,11 +35,10 @@ public class CardView : MonoBehaviour
         // 背景也可以按阵营换色/换图
         if (backgroundRenderer != null)
         {
-            // 例如植物绿色，虫棕色
-            Color bgColor = data.faction == Faction.Plant
-                ? new Color(0.6f, 0.9f, 0.6f)
-                : new Color(0.9f, 0.7f, 0.5f);
-            backgroundRenderer.material.color = bgColor;
+            if (data.faction == Faction.Plant && data.plantBackgroundTexture != null)
+                backgroundRenderer.material.mainTexture = data.plantBackgroundTexture;
+            else if (data.faction == Faction.Bug && data.bugBackgroundTexture != null)
+                backgroundRenderer.material.mainTexture = data.bugBackgroundTexture;
         }
     }
 }

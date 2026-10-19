@@ -16,9 +16,13 @@ public class CardData : ScriptableObject
     public string cardName;
     public Faction faction;
     public int cost;
+    public int attack;
+    public int health;
     public Sprite artwork;
     public Sprite plantBackground;
     public Sprite bugBackground;
+    public Texture2D plantBackgroundTexture;
+    public Texture2D bugBackgroundTexture;
 
     [TextArea] public string description;
 

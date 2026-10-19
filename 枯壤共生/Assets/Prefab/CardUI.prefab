@@ -491,6 +491,7 @@ GameObject:
   - component: {fileID: 5858008195826348055}
   - component: {fileID: 4816376553942336233}
   - component: {fileID: -2351921013583427584}
+  - component: {fileID: 5234718858757670417}
   m_Layer: 5
   m_Name: CardUI
   m_TagString: Untagged
@@ -507,8 +508,8 @@ RectTransform:
   m_GameObject: {fileID: 5797636462147452474}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3.11, y: 4.39, z: 4.39}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 2.16, y: 3.0490034, z: 0.6945338}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 7397912157223483487}
   - {fileID: 5101909417588580408}
@@ -576,3 +577,19 @@ MonoBehaviour:
   nameText: {fileID: 1607480333318868873}
   costText: {fileID: 5326183509997748712}
   descriptionText: {fileID: 6034052664314654502}
+  hoverYOffset: 250
+  hoverScale: 1.15
+  lerpSpeed: 10
+  isDragging: 0
+--- !u!114 &5234718858757670417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5797636462147452474}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce368a49e3f6faf40a540fa16185f04e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

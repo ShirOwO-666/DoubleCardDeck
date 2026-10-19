@@ -9,18 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 79ebb5fef44d8cd4f8f11b1007a0a8be, type: 3}
-  m_Name: gs
+  m_Script: {fileID: 11500000, guid: fee6ec840f5d006488936f1390c6fb42, type: 3}
+  m_Name: zz
   m_EditorClassIdentifier: 
-  cardId: 1
-  cardName: gs
-  faction: 2
-  cost: 0
+  enemyId: 
+  enemyName: 
   artwork: {fileID: 0}
+  attack: 1
+  health: 1
   description: 
-  baseDamage: 0
-  baseHeal: 0
-  baseBlock: 0
-  symbiosisDamage: 0
-  symbiosisHeal: 0
-  symbiosisBlock: 0
