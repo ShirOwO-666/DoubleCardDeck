@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: zhiw
   m_EditorClassIdentifier: 
   cardId: 0
-  cardName: zhiw
+  cardName: plant
   faction: 0
   cost: 1
   attack: 1

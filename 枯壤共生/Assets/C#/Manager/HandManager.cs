@@ -1,20 +1,20 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class HandManager : MonoBehaviour
 {
-    [Header("ÒıÓÃ")]
+    [Header("å¼•ç”¨")]
     public CardGameManager gameManager;
     public GameObject cardUIPrefab;
     public Transform handRoot;
 
-    [Header("»¡ĞÎÅÅÁĞ²ÎÊı")]
+    [Header("å¼§å½¢æ’åˆ—å‚æ•°")]
     public float radius = 1200f;
     public float angleStep = 8f;
     public float heightOffset = -350f;
 
-    [Header("ÊÖÅÆËõ·Å")]
+    [Header("æ‰‹ç‰Œç¼©æ”¾")]
     public Vector3 handCardScale = Vector3.one;
 
     private List<GameObject> spawnedCards = new List<GameObject>();
@@ -24,19 +24,18 @@ public class HandManager : MonoBehaviour
         if (gameManager == null)
             gameManager = FindObjectOfType<CardGameManager>();
 
-        //if (gameManager != null)
-        //    gameManager.OnHandChanged += RefreshHand;
-
-        //RefreshHand();
+        // å‡ºç‰Œåï¼ˆæ‰‹ç‰Œæ•°æ®å˜åŒ–ï¼‰é‡æ–°æ’åˆ—æ‰‹ç‰Œï¼Œè®©å‰©ä½™å¡ç‰Œåˆæ‹¢
+        if (gameManager != null)
+            gameManager.OnHandChanged += RearrangeHand;
     }
 
     private void OnDestroy()
     {
         if (gameManager != null)
-            gameManager.OnHandChanged -= RefreshHand;
+            gameManager.OnHandChanged -= RearrangeHand;
     }
 
-    // È«Á¿Ë¢ĞÂ£¨ÓÃÓÚ³öÅÆºó£©
+    // å…¨é‡åˆ·æ–°ï¼ˆç”¨äºå‡ºç‰Œåï¼‰
     public void RefreshHand()
     {
         if (gameManager == null || cardUIPrefab == null || handRoot == null) return;
@@ -60,12 +59,30 @@ public class HandManager : MonoBehaviour
         ArrangeCardsArc();
     }
 
-    // ×·¼ÓÒ»ÕÅ£¨ÓÃÓÚ³éÅÆ¶¯»­£©
+    // å‡ºç‰Œåé‡æ–°æ’åˆ—æ‰‹ç‰Œï¼ˆåˆæ‹¢ç©ºä½ï¼‰
+    public void RearrangeHand()
+    {
+        // ç”¨åç¨‹å»¶è¿Ÿä¸€å¸§ï¼šç­‰è¢« Destroy çš„å¡ç‰ŒçœŸæ­£é”€æ¯ï¼Œå†æ¸…ç†å¹½çµå¼•ç”¨å¹¶é‡æ’
+        StartCoroutine(RearrangeHandRoutine());
+    }
+
+    private IEnumerator RearrangeHandRoutine()
+    {
+        yield return null;
+
+        // æ¸…ç†å·²é”€æ¯çš„å¡ç‰Œå¼•ç”¨ï¼ˆæ‰“å‡ºé‚£å¼ å¡å·²è¢« Destroyï¼‰
+        spawnedCards.RemoveAll(item => item == null);
+
+        // é‡æ–°æŒ‰å¼§å½¢æ’åˆ—å‰©ä½™æ‰‹ç‰Œ
+        ArrangeCardsArc();
+    }
+
+    // è¿½åŠ ä¸€å¼ ï¼ˆç”¨äºæŠ½ç‰ŒåŠ¨ç”»ï¼‰
     public void AppendCard(CardInstance card)
     {
         if (cardUIPrefab == null || handRoot == null) return;
 
-        // ÇåÀíÒ»±é¾ÉÓÄÁé
+        // æ¸…ç†ä¸€éæ—§å¹½çµ
         spawnedCards.RemoveAll(item => item == null);
 
         GameObject go = Instantiate(cardUIPrefab, handRoot);
@@ -84,10 +101,10 @@ public class HandManager : MonoBehaviour
         int count = spawnedCards.Count;
         if (count == 0) return;
 
-        // ÇåÀíµôÒÑ¾­±»Ïú»Ù£¨ÓÄÁé£©µÄ¿¨ÅÆÒıÓÃ
+        // æ¸…ç†æ‰å·²ç»è¢«é”€æ¯ï¼ˆå¹½çµï¼‰çš„å¡ç‰Œå¼•ç”¨
         spawnedCards.RemoveAll(item => item == null);
 
-        // ÖØĞÂ»ñÈ¡ÊıÁ¿£¨ÒòÎª¿ÉÄÜÇåÀíµôÁËÒ»Ğ©£©
+        // é‡æ–°è·å–æ•°é‡ï¼ˆå› ä¸ºå¯èƒ½æ¸…ç†æ‰äº†ä¸€äº›ï¼‰
         count = spawnedCards.Count;
         if (count == 0) return;
 
@@ -96,7 +113,7 @@ public class HandManager : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            // Ë«ÖØ±£ÏÕ£ºÈç¹ûÓÖ±»Ïú»ÙÁË£¬Ö±½ÓÌø¹ı
+            // åŒé‡ä¿é™©ï¼šå¦‚æœåˆè¢«é”€æ¯äº†ï¼Œç›´æ¥è·³è¿‡
             if (spawnedCards[i] == null) continue;
 
             float angle = startAngle + angleStep * i;
@@ -106,7 +123,7 @@ public class HandManager : MonoBehaviour
             float y = Mathf.Cos(rad) * radius - radius + heightOffset;
 
             RectTransform rt = spawnedCards[i].GetComponent<RectTransform>();
-            if (rt == null) continue; // ·ÀÓùĞÔ±à³Ì
+            if (rt == null) continue; // é˜²å¾¡æ€§ç¼–ç¨‹
 
             Vector2 pos = new Vector2(x, y);
             rt.anchoredPosition = pos;

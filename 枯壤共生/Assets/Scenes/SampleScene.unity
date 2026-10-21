@@ -191,8 +191,15 @@ MonoBehaviour:
   maxEnergy: 3
   handLimit: 8
   symbiosisMax: 10
-  enemyPool: []
-  maxEnemiesPerTurn: 2
+  enemyPool:
+  - {fileID: 11400000, guid: 5aa8943379388b745950e4613b755a8c, type: 2}
+  initialEnemyCount: 1
+  enemyGrowthPerTurn: 1
+  maxEnemySpawnPerTurn: 5
+  allFusionRecipes:
+  - {fileID: 11400000, guid: ab1f4e5089aad484a876395df4f0166d, type: 2}
+  defaultFusion3DPrefab: {fileID: 672556707055732527, guid: 076e0985cbae49a4ea4a769ec5d0f5c0,
+    type: 3}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -549,6 +556,56 @@ MonoBehaviour:
   angleStep: 8
   heightOffset: -350
   handCardScale: {x: 2.16, y: 3.0490034, z: 0.6945338}
+--- !u!1 &383702020
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 383702021}
+  - component: {fileID: 383702022}
+  m_Layer: 0
+  m_Name: BoardEnemySpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &383702021
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 383702020}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 408373723}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &383702022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 383702020}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 874fa0b2eff6a9543b92624b2265f7af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gameManager: {fileID: 287472005}
+  enemyPrefab: {fileID: 672556707055732527, guid: 3a23c04425ec9f345ab67b6407aa35fc,
+    type: 3}
+  enemyYOffset: 0.01
+  enemyRotation: {x: 90, y: 0, z: 0}
+  advanceDuration: 0.5
 --- !u!1 &404482127
 GameObject:
   m_ObjectHideFlags: 0
@@ -637,6 +694,7 @@ Transform:
   - {fileID: 287472004}
   - {fileID: 404482128}
   - {fileID: 844307673}
+  - {fileID: 383702021}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &410087039
@@ -1804,6 +1862,7 @@ MonoBehaviour:
   gameManager: {fileID: 287472005}
   card3DPrefab: {fileID: 672556707055732527, guid: 11d845698f1f4664597a1426c93d7987,
     type: 3}
+  defaultSymbiosisPrefab: {fileID: 0}
   boardCardYOffset: 0.01
   boardCardRotation: {x: 90, y: 0, z: 0}
 --- !u!1 &912202524
@@ -3462,7 +3521,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1723386115}
   m_Layer: 0
-  m_Name: wBoardSlot (2)
+  m_Name: wBoardSlot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

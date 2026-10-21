@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50167927da28c154fa3b6d9d7413440a, type: 3}
+  m_Name: bugandplant
+  m_EditorClassIdentifier: 
+  plantCard: {fileID: 11400000, guid: af1f3e85a8eb243408e27b003cdb4923, type: 2}
+  bugCard: {fileID: 11400000, guid: c55d73277da79de44a12e70e80e12f83, type: 2}
+  fusion3DPrefab: {fileID: 672556707055732527, guid: 076e0985cbae49a4ea4a769ec5d0f5c0,
+    type: 3}

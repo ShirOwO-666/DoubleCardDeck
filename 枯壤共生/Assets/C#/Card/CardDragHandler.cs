@@ -44,37 +44,33 @@ public class CardDragHandler : MonoBehaviour,
         canvasGroup.blocksRaycasts = true;
 
         Ray ray = Camera.main.ScreenPointToRay(eventData.position);
-        Debug.Log($"射线起点：{ray.origin}，方向：{ray.direction}");
 
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+        // 使用 RaycastAll 穿透所有物体，寻找真正的 BoardSlot
+        RaycastHit[] hits = Physics.RaycastAll(ray, 100f);
+        BoardSlot slot = null;
+
+        foreach (var hit in hits)
         {
-            Debug.Log($"射线打到：{hit.collider.name}，路径：{GetPath(hit.collider.transform)}");
+            slot = hit.collider.GetComponentInParent<BoardSlot>();
+            if (slot != null) break;
+        }
 
-            BoardSlot slot = hit.collider.GetComponentInParent<BoardSlot>();
-            if (slot != null)
+        if (slot != null)
+        {
+            if (ui != null && CardGameManager.Instance.PlayCard(ui.Instance, slot))
             {
-                Debug.Log($"找到格子：{slot.name}");
-
-                if (ui != null && CardGameManager.Instance.PlayCard(ui.Instance, slot))
-                {
-                    Destroy(gameObject);
-                    return;
-                }
-            }
-            else
-            {
-                Debug.Log("打到的不是 BoardSlot");
+                Destroy(gameObject);
+                return;
             }
         }
         else
         {
-            Debug.Log("射线没打到任何物体");
+            Debug.Log("没有找到任何 BoardSlot");
         }
 
         // 没放到格子上，回原位
         rect.anchoredPosition = originalPos;
     }
-
     private string GetPath(Transform t)
     {
         string path = t.name;

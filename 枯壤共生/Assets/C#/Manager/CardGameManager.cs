@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,39 +6,41 @@ using UnityEngine;
 
 public enum GamePhase
 {
-    Start,    // ¿ªÊ¼½×¶Î£¨½öµÚÒ»»ØºÏÆğÊÖ£©
-    Draw,     // ³éÅÆ½×¶Î
-    Play,     // ³öÅÆ½×¶Î
-    End,      // »ØºÏ½áÊø£¨ÆúÅÆ£©
-    Combat    // ¹¥»÷½×¶Î
+    Start, Draw, Play, End, Combat
 }
 
 public class CardGameManager : MonoBehaviour
 {
     public static CardGameManager Instance { get; private set; }
 
-    [Header("¿¨×éÅäÖÃ")]
+    [Header("å¡ç»„é…ç½®")]
     public List<CardData> plantDeckData = new List<CardData>();
     public List<CardData> bugDeckData = new List<CardData>();
     public CardData symbiosisBurstCard;
 
-    [Header("×ÀÃæ¸ñ×Ó")]
+    [Header("æ¡Œé¢æ ¼å­")]
     public List<BoardSlot> boardSlots = new List<BoardSlot>();
 
-    [Header("¹æÔò²ÎÊı")]
+    [Header("è§„åˆ™å‚æ•°")]
     public int maxEnergy = 3;
     public int handLimit = 12;
     public int symbiosisMax = 10;
 
-    [Header("µĞÈËÅäÖÃ")]
+    [Header("æ•Œäººé…ç½®")]
     public List<EnemyData> enemyPool = new List<EnemyData>();
-    public int maxEnemiesPerTurn = 2;
+    public int initialEnemyCount = 1;
+    public int enemyGrowthPerTurn = 1;
+    public int maxEnemySpawnPerTurn = 5;
+
+    // ===== æ–°å¢ï¼šèåˆé…ç½® =====
+    [Header("èåˆé…ç½®")]
+    public List<FusionRecipe> allFusionRecipes = new List<FusionRecipe>();
+    public GameObject defaultFusion3DPrefab;
 
     private int nextEnemyId = 0;
     private List<CardInstance> plantGraveyard = new List<CardInstance>();
     private List<CardInstance> bugGraveyard = new List<CardInstance>();
 
-    // ===== ÔËĞĞÊ±×´Ì¬ =====
     private List<CardInstance> plantDeck = new List<CardInstance>();
     private List<CardInstance> bugDeck = new List<CardInstance>();
     private List<CardInstance> hand = new List<CardInstance>();
@@ -47,38 +49,40 @@ public class CardGameManager : MonoBehaviour
     public int SymbiosisValue { get; private set; }
     public bool SymbiosisBurstUnlocked { get; private set; }
 
-    private List<Faction> playedThisTurn = new List<Faction>();
     private int nextInstanceId = 0;
     private int currentTurn = 0;
 
-    // ===== ½×¶Î¿ØÖÆ =====
     public GamePhase CurrentPhase { get; private set; }
     public event Action<GamePhase> OnPhaseChanged;
     private bool playerEndedPlayPhase = false;
 
-    // ===== ÊÂ¼ş =====
+    // ===== äº‹ä»¶ =====
     public event Action OnHandChanged;
     public event Action<CardInstance, BoardSlot> OnCardPlayed;
     public event Action<CardInstance> OnCardDrawn;
 
-    // ===== ¹«¿ª·ÃÎÊ =====
+    // ===== æ–°å¢ï¼šåœºä¸Šå¡ç‰Œç§»é™¤äº‹ä»¶ï¼ˆç”¨äºåŒæ­¥é”€æ¯è§†è§‰ï¼‰ =====
+    public event Action<BoardSlot, Faction> OnBoardCardRemoved;
+
+    public event Action<EnemyInstance, BoardSlot> OnEnemySpawned;
+    public event Action<EnemyInstance, BoardSlot> OnEnemyAdvanced;
+    public event Action<EnemyInstance> OnEnemyDied;
+
     public IReadOnlyList<CardInstance> Hand => hand;
     public int PlantDeckCount => plantDeck.Count;
     public int BugDeckCount => bugDeck.Count;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+
+        boardSlots = new List<BoardSlot>(FindObjectsOfType<BoardSlot>());
+        boardSlots.Sort((a, b) => a.row != b.row ? a.row.CompareTo(b.row) : a.col.CompareTo(b.col));
     }
 
     private void Start()
     {
-        // ÑÓ³ÙÒ»Ö¡£¬È·±£ËùÓĞ UI ºÍ¶¯»­½Å±¾Íê³É¶©ÔÄ
         StartCoroutine(StartGameDelayed());
     }
 
@@ -94,19 +98,15 @@ public class CardGameManager : MonoBehaviour
         StartCoroutine(GameLoop());
     }
 
-    // =========================================================
-    // ºËĞÄ»ØºÏÑ­»·
-    // =========================================================
     private IEnumerator GameLoop()
     {
-        // 1. ¿ªÊ¼½×¶Î£¨ÆğÊÖ³éÅÆ£©
         SetPhase(GamePhase.Start);
+        SpawnEnemiesInWaitingRow();
+        yield return new WaitForSeconds(0.5f);
         yield return StartCoroutine(DrawStartingHandRoutine());
 
-        // 2. ½øÈëÖ÷Ñ­»·
         while (true)
         {
-            // ³éÅÆ½×¶Î£¨µÚÒ»»ØºÏÌø¹ı£¬ÒòÎªÆğÊÖÒÑ¾­³éÁË£©
             if (currentTurn > 0)
             {
                 SetPhase(GamePhase.Draw);
@@ -116,26 +116,19 @@ public class CardGameManager : MonoBehaviour
                 yield return new WaitForSeconds(0.5f);
             }
 
-            // ³öÅÆ½×¶Î£¨µÈ´ıÍæ¼Òµã»÷½áÊø»ØºÏ£©
             SetPhase(GamePhase.Play);
             CurrentEnergy = maxEnergy;
-            playedThisTurn.Clear();
-            Debug.Log($"»ØºÏ {currentTurn + 1} ¿ªÊ¼£ºÄÜÁ¿ {CurrentEnergy}");
-
             playerEndedPlayPhase = false;
             yield return new WaitUntil(() => playerEndedPlayPhase);
 
-            // »ØºÏ½áÊø½×¶Î£¨ÆúÅÆµÈÂß¼­£©
             SetPhase(GamePhase.End);
             yield return StartCoroutine(EndPhaseRoutine());
 
-            // µĞÈËÍÆ½øºÍÉú³É
             AdvanceEnemies();
             yield return new WaitForSeconds(0.3f);
             SpawnEnemiesInWaitingRow();
             yield return new WaitForSeconds(0.3f);
 
-            // ¹¥»÷½×¶Î
             SetPhase(GamePhase.Combat);
             yield return StartCoroutine(CombatPhaseRoutine());
 
@@ -146,39 +139,23 @@ public class CardGameManager : MonoBehaviour
     private void SetPhase(GamePhase phase)
     {
         CurrentPhase = phase;
-        Debug.Log($"===== ½øÈë½×¶Î£º{phase} =====");
+        Debug.Log($"===== è¿›å…¥é˜¶æ®µï¼š{phase} =====");
         OnPhaseChanged?.Invoke(phase);
     }
 
     public void EndPlayPhase()
     {
-        if (CurrentPhase == GamePhase.Play)
-        {
-            playerEndedPlayPhase = true;
-        }
+        if (CurrentPhase == GamePhase.Play) playerEndedPlayPhase = true;
     }
 
-    // =========================================================
-    // ¸÷½×¶Î¾ßÌåÂß¼­
-    // =========================================================
     private IEnumerator DrawStartingHandRoutine()
     {
-        for (int i = 0; i < 3; i++)
-        {
-            DrawCard(Faction.Plant);
-            yield return new WaitForSeconds(0.7f);
-        }
-        for (int i = 0; i < 3; i++)
-        {
-            DrawCard(Faction.Bug);
-            yield return new WaitForSeconds(0.7f);
-        }
+        for (int i = 0; i < 3; i++) { DrawCard(Faction.Plant); yield return new WaitForSeconds(0.7f); }
+        for (int i = 0; i < 3; i++) { DrawCard(Faction.Bug); yield return new WaitForSeconds(0.7f); }
     }
 
     private IEnumerator EndPhaseRoutine()
     {
-        // ÔİÊ±Áô¿Õ£¬ÒÔºóÒª×öÆúÅÆ UI ¾ÍÔÚÕâÀïĞ´
-        Debug.Log("»ØºÏ½áÊø£¬¼ì²éÆúÅÆ...");
         yield return new WaitForSeconds(0.3f);
     }
 
@@ -186,35 +163,39 @@ public class CardGameManager : MonoBehaviour
     {
         List<CombatUnit> units = new List<CombatUnit>();
 
-        // ¼º·½µ¥Î»
         for (int col = 0; col < 5; col++)
         {
             BoardSlot slot = GetSlot(2, col);
             if (slot == null) continue;
 
-            if (slot.plantCard != null && slot.plantCard.data != null)
-                units.Add(new CombatUnit(slot.plantCard, slot, true, 2, col));
-            if (slot.bugCard != null && slot.bugCard.data != null)
-                units.Add(new CombatUnit(slot.bugCard, slot, true, 2, col));
-            if (slot.symbiosisCard != null && slot.symbiosisCard.data != null)
-                units.Add(new CombatUnit(slot.symbiosisCard, slot, true, 2, col));
+            if (slot.HasSymbioticPair)
+            {
+                units.Add(new CombatUnit((CardInstance)null, slot, true, 2, col) { isSymbioticPair = true });
+            }
+            else
+            {
+                if (slot.plantCard != null && slot.plantCard.data != null) units.Add(new CombatUnit(slot.plantCard, slot, true, 2, col));
+                if (slot.bugCard != null && slot.bugCard.data != null) units.Add(new CombatUnit(slot.bugCard, slot, true, 2, col));
+                if (slot.symbiosisCard != null && slot.symbiosisCard.data != null) units.Add(new CombatUnit(slot.symbiosisCard, slot, true, 2, col));
+            }
         }
 
-        // µĞÈËµ¥Î»
         for (int col = 0; col < 5; col++)
         {
             BoardSlot slot = GetSlot(1, col);
-            if (slot != null && slot.enemy != null && !slot.enemy.IsDead)
-                units.Add(new CombatUnit(slot.enemy, slot, false, 1, col));
+            if (slot != null && slot.HasEnemy()) units.Add(new CombatUnit(slot.enemy, slot, false, 1, col));
         }
 
-        // °´¹¥»÷Á¦½µĞòÅÅĞò
         units.Sort((a, b) => b.attack.CompareTo(a.attack));
 
         foreach (var unit in units)
         {
-            if (unit.isPlayer && (unit.card == null || unit.card.currentHealth <= 0)) continue;
-            if (!unit.isPlayer && (unit.enemy == null || unit.enemy.IsDead)) continue;
+            if (unit.isPlayer)
+            {
+                if (unit.isSymbioticPair) { if (unit.slot == null || !unit.slot.HasPlayerCard()) continue; }
+                else if (unit.card == null || unit.card.currentHealth <= 0) continue;
+            }
+            else if (unit.enemy == null || unit.enemy.IsDead) continue;
 
             BoardSlot targetSlot = unit.isPlayer ? GetSlot(1, unit.col) : GetSlot(2, unit.col);
             if (targetSlot == null) continue;
@@ -224,11 +205,10 @@ public class CardGameManager : MonoBehaviour
                 if (!targetSlot.HasEnemy()) continue;
                 EnemyInstance target = targetSlot.enemy;
                 target.currentHealth -= unit.attack;
-                Debug.Log($"{unit.name} ¹¥»÷ {target.data.enemyName}£¬Ôì³É {unit.attack} ÉËº¦£¬µĞÈËÊ£Óà {target.currentHealth}");
 
                 if (target.IsDead)
                 {
-                    Debug.Log($"µĞÈË {target.data.enemyName} ËÀÍö£¬ÒÆ³ı");
+                    OnEnemyDied?.Invoke(target);
                     targetSlot.enemy = null;
                 }
             }
@@ -236,24 +216,40 @@ public class CardGameManager : MonoBehaviour
             {
                 if (!targetSlot.HasPlayerCard()) continue;
 
-                CardInstance targetCard = targetSlot.plantCard;
-                if (targetCard == null || targetCard.data == null) targetCard = targetSlot.bugCard;
-                if (targetCard == null || targetCard.data == null) targetCard = targetSlot.symbiosisCard;
-                if (targetCard == null || targetCard.data == null) continue;
-
-                targetCard.currentHealth -= unit.attack;
-                Debug.Log($"{unit.name} ¹¥»÷ {targetCard.data.cardName}£¬Ôì³É {unit.attack} ÉËº¦£¬¿¨ÅÆÊ£Óà {targetCard.currentHealth}");
-
-                if (targetCard.currentHealth <= 0)
+                if (targetSlot.HasSymbioticPair)
                 {
-                    Debug.Log($"{targetCard.data.cardName} ËÀÍö£¬½øÈëÄ¹µØ");
-                    SendToGraveyard(targetCard);
-                    targetSlot.RemovePlayerCard(targetCard);
+                    targetSlot.ApplyDamageToSymbioticPair(unit.attack);
+                    if (targetSlot.plantCard != null && targetSlot.plantCard.currentHealth <= 0)
+                    {
+                        SendToGraveyard(targetSlot.plantCard);
+                        OnBoardCardRemoved?.Invoke(targetSlot, Faction.Plant);
+                        targetSlot.plantCard = null;
+                    }
+                    if (targetSlot.bugCard != null && targetSlot.bugCard.currentHealth <= 0)
+                    {
+                        SendToGraveyard(targetSlot.bugCard);
+                        OnBoardCardRemoved?.Invoke(targetSlot, Faction.Bug);
+                        targetSlot.bugCard = null;
+                    }
+                }
+                else
+                {
+                    CardInstance targetCard = targetSlot.plantCard;
+                    if (targetCard == null || targetCard.data == null) targetCard = targetSlot.bugCard;
+                    if (targetCard == null || targetCard.data == null) targetCard = targetSlot.symbiosisCard;
+                    if (targetCard == null || targetCard.data == null) continue;
+
+                    targetCard.currentHealth -= unit.attack;
+                    if (targetCard.currentHealth <= 0)
+                    {
+                        SendToGraveyard(targetCard);
+                        OnBoardCardRemoved?.Invoke(targetSlot, targetCard.Faction);
+                        targetSlot.RemovePlayerCard(targetCard);
+                    }
                 }
             }
             yield return new WaitForSeconds(0.4f);
         }
-
         CleanupDeadPlayerCards();
     }
 
@@ -264,24 +260,24 @@ public class CardGameManager : MonoBehaviour
             if (slot.plantCard != null && slot.plantCard.currentHealth <= 0)
             {
                 SendToGraveyard(slot.plantCard);
+                OnBoardCardRemoved?.Invoke(slot, Faction.Plant);
                 slot.plantCard = null;
             }
             if (slot.bugCard != null && slot.bugCard.currentHealth <= 0)
             {
                 SendToGraveyard(slot.bugCard);
+                OnBoardCardRemoved?.Invoke(slot, Faction.Bug);
                 slot.bugCard = null;
             }
             if (slot.symbiosisCard != null && slot.symbiosisCard.currentHealth <= 0)
             {
                 SendToGraveyard(slot.symbiosisCard);
+                OnBoardCardRemoved?.Invoke(slot, Faction.Symbiosis);
                 slot.symbiosisCard = null;
             }
         }
     }
 
-    // =========================================================
-    // »ù´¡Âß¼­£¨³éÅÆ¡¢³öÅÆ¡¢Ä¹µØµÈ£©
-    // =========================================================
     private void BuildDecks()
     {
         plantDeck = plantDeckData.Select(d => new CardInstance(d, nextInstanceId++)).ToList();
@@ -293,7 +289,6 @@ public class CardGameManager : MonoBehaviour
     public bool DrawCard(Faction faction)
     {
         if (hand.Count >= handLimit) return false;
-
         List<CardInstance> deck = faction == Faction.Plant ? plantDeck : bugDeck;
         List<CardInstance> graveyard = faction == Faction.Plant ? plantGraveyard : bugGraveyard;
 
@@ -308,7 +303,6 @@ public class CardGameManager : MonoBehaviour
         CardInstance card = deck[0];
         deck.RemoveAt(0);
         hand.Add(card);
-
         OnCardDrawn?.Invoke(card);
         return true;
     }
@@ -328,31 +322,35 @@ public class CardGameManager : MonoBehaviour
 
         CurrentEnergy -= card.Cost;
         hand.Remove(card);
+
+        bool wasPair = slot.HasSymbioticPair;
         slot.Place(card);
 
-        ProcessAlternation(card.Faction);
-        ProcessSymbiosisEffect(card);
+        if (!wasPair && slot.HasSymbioticPair)
+            AddSymbiosis(1);
 
+        ProcessSymbiosisEffect(card);
         NotifyHandChanged();
         OnCardPlayed?.Invoke(card, slot);
 
-        Debug.Log($"´ò³ö {card.data.cardName}£¬Ê£ÓàÄÜÁ¿ {CurrentEnergy}");
         return true;
     }
 
-    // ... Ê¡ÂÔ²¿·Ö¾É´úÂë£¨½»Ìæ¡¢¹²Éú¡¢Ï´ÅÆµÈ±£³ÖÔ­Ñù£© ...
-    private void ProcessAlternation(Faction faction)
+    // ===== æ–°å¢ï¼šèåˆé…æ–¹æŸ¥æ‰¾ =====
+    public FusionRecipe GetFusionRecipe(CardData plant, CardData bug)
     {
-        if (faction == Faction.Symbiosis) return;
-        if (playedThisTurn.Count > 0)
+        foreach (var recipe in allFusionRecipes)
         {
-            Faction last = playedThisTurn[playedThisTurn.Count - 1];
-            if (last != faction) AddSymbiosis(1);
+            if ((recipe.plantCard == plant && recipe.bugCard == bug) ||
+                (recipe.plantCard == bug && recipe.bugCard == plant))
+            {
+                return recipe;
+            }
         }
-        playedThisTurn.Add(faction);
+        return null;
     }
 
-    private void ProcessSymbiosisEffect(CardInstance card) { /* ±£³ÖÔ­Ñù */ }
+    private void ProcessSymbiosisEffect(CardInstance card) { }
     private void AddSymbiosis(int amount) { SymbiosisValue = Mathf.Min(SymbiosisValue + amount, symbiosisMax); }
     private void NotifyHandChanged() { OnHandChanged?.Invoke(); }
     private void Shuffle<T>(List<T> list)
@@ -364,10 +362,7 @@ public class CardGameManager : MonoBehaviour
         }
     }
 
-    public BoardSlot GetSlot(int row, int col)
-    {
-        return boardSlots.FirstOrDefault(s => s.row == row && s.col == col);
-    }
+    public BoardSlot GetSlot(int row, int col) => boardSlots.FirstOrDefault(s => s.row == row && s.col == col);
 
     public void SendToGraveyard(CardInstance card)
     {
@@ -382,10 +377,12 @@ public class CardGameManager : MonoBehaviour
         {
             BoardSlot waiting = GetSlot(0, col);
             BoardSlot enemyRow = GetSlot(1, col);
-            if (waiting != null && enemyRow != null && waiting.enemy != null && enemyRow.enemy == null)
+            if (waiting != null && enemyRow != null && waiting.IsEnemyOccupied() && !enemyRow.IsEnemyOccupied())
             {
-                enemyRow.enemy = waiting.enemy;
+                EnemyInstance moved = waiting.enemy;
+                enemyRow.enemy = moved;
                 waiting.enemy = null;
+                OnEnemyAdvanced?.Invoke(moved, enemyRow);
             }
         }
     }
@@ -393,16 +390,18 @@ public class CardGameManager : MonoBehaviour
     public void SpawnEnemiesInWaitingRow()
     {
         if (enemyPool.Count == 0) return;
+        int spawnCount = Mathf.Min(initialEnemyCount + currentTurn * enemyGrowthPerTurn, maxEnemySpawnPerTurn);
         int spawned = 0;
         List<int> cols = new List<int> { 0, 1, 2, 3, 4 };
         Shuffle(cols);
         foreach (int col in cols)
         {
-            if (spawned >= maxEnemiesPerTurn) break;
+            if (spawned >= spawnCount) break;
             BoardSlot waiting = GetSlot(0, col);
-            if (waiting == null || waiting.enemy != null) continue;
+            if (waiting == null || waiting.IsEnemyOccupied()) continue;
             EnemyData data = enemyPool[UnityEngine.Random.Range(0, enemyPool.Count)];
             waiting.enemy = new EnemyInstance(data, nextEnemyId++);
+            OnEnemySpawned?.Invoke(waiting.enemy, waiting);
             spawned++;
         }
     }
