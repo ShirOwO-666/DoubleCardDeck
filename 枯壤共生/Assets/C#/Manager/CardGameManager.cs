@@ -60,6 +60,7 @@ public class CardGameManager : MonoBehaviour
     public event Action OnHandChanged;
     public event Action<CardInstance, BoardSlot> OnCardPlayed;
     public event Action<CardInstance> OnCardDrawn;
+    public event Action<BoardSlot, bool> OnUnitAttacked;
 
     // ===== 新增：场上卡牌移除事件（用于同步销毁视觉） =====
     public event Action<BoardSlot, Faction> OnBoardCardRemoved;
@@ -163,6 +164,7 @@ public class CardGameManager : MonoBehaviour
     {
         List<CombatUnit> units = new List<CombatUnit>();
 
+        // 1. 收集己方单位
         for (int col = 0; col < 5; col++)
         {
             BoardSlot slot = GetSlot(2, col);
@@ -180,16 +182,39 @@ public class CardGameManager : MonoBehaviour
             }
         }
 
+        // 2. 收集敌人单位
         for (int col = 0; col < 5; col++)
         {
             BoardSlot slot = GetSlot(1, col);
             if (slot != null && slot.HasEnemy()) units.Add(new CombatUnit(slot.enemy, slot, false, 1, col));
         }
 
-        units.Sort((a, b) => b.attack.CompareTo(a.attack));
+        // 3. 按攻击力降序排序
+        // 排序规则：1. 攻击力（高到低） 2. 生命值（高到低） 3. 玩家优先
+        units.Sort((a, b) =>
+        {
+            // 比较攻击力
+            int attackCompare = b.attack.CompareTo(a.attack);
+            if (attackCompare != 0) return attackCompare;
 
+            // 攻击力相同，比较生命值
+            int aHealth = a.isPlayer ? (a.isSymbioticPair ? a.slot.GetCombinedHealth() : a.card.currentHealth) : a.enemy.currentHealth;
+            int bHealth = b.isPlayer ? (b.isSymbioticPair ? b.slot.GetCombinedHealth() : b.card.currentHealth) : b.enemy.currentHealth;
+
+            int healthCompare = bHealth.CompareTo(aHealth);
+            if (healthCompare != 0) return healthCompare;
+
+            // 血量和攻击都一样，玩家优先（isPlayer 为 true 的排前面）
+            if (a.isPlayer && !b.isPlayer) return -1;
+            if (!a.isPlayer && b.isPlayer) return 1;
+
+            return 0;
+        });
+
+        // 4. 依次执行攻击
         foreach (var unit in units)
         {
+            // 检查单位是否已阵亡
             if (unit.isPlayer)
             {
                 if (unit.isSymbioticPair) { if (unit.slot == null || !unit.slot.HasPlayerCard()) continue; }
@@ -197,28 +222,51 @@ public class CardGameManager : MonoBehaviour
             }
             else if (unit.enemy == null || unit.enemy.IsDead) continue;
 
+            // 找同列目标
             BoardSlot targetSlot = unit.isPlayer ? GetSlot(1, unit.col) : GetSlot(2, unit.col);
             if (targetSlot == null) continue;
 
+            // 判断目标是否存在，决定是否播放动画
+            bool hasValidTarget = false;
+            if (unit.isPlayer && targetSlot.HasEnemy()) hasValidTarget = true;
+            if (!unit.isPlayer && targetSlot.HasPlayerCard()) hasValidTarget = true;
+
+            // ==========================================
+            // 【新增动画触发】
+            if (hasValidTarget)
+            {
+                // 通知 BoardCardSpawner 播放撞击动画
+                OnUnitAttacked?.Invoke(unit.slot, unit.isPlayer);
+
+                // 等待 0.15 秒（卡牌刚好撞出去的时间）再扣血，打击感更好
+                yield return new WaitForSeconds(0.15f);
+            }
+            // ==========================================
+
+            // 执行扣血逻辑
             if (unit.isPlayer)
             {
-                if (!targetSlot.HasEnemy()) continue;
+                // 己方攻击敌人
                 EnemyInstance target = targetSlot.enemy;
                 target.currentHealth -= unit.attack;
+                Debug.Log($"{unit.name} 攻击 {target.data.enemyName}，造成 {unit.attack} 伤害，敌人剩余 {target.currentHealth}");
 
                 if (target.IsDead)
                 {
+                    Debug.Log($"敌人 {target.data.enemyName} 死亡，移除");
                     OnEnemyDied?.Invoke(target);
                     targetSlot.enemy = null;
                 }
             }
             else
             {
-                if (!targetSlot.HasPlayerCard()) continue;
-
+                // 敌人攻击己方
                 if (targetSlot.HasSymbioticPair)
                 {
+                    // 共生体扣血
                     targetSlot.ApplyDamageToSymbioticPair(unit.attack);
+                    Debug.Log($"{unit.name} 攻击共生体，造成 {unit.attack} 伤害（共享生命池）");
+
                     if (targetSlot.plantCard != null && targetSlot.plantCard.currentHealth <= 0)
                     {
                         SendToGraveyard(targetSlot.plantCard);
@@ -234,12 +282,15 @@ public class CardGameManager : MonoBehaviour
                 }
                 else
                 {
+                    // 普通单卡扣血
                     CardInstance targetCard = targetSlot.plantCard;
                     if (targetCard == null || targetCard.data == null) targetCard = targetSlot.bugCard;
                     if (targetCard == null || targetCard.data == null) targetCard = targetSlot.symbiosisCard;
                     if (targetCard == null || targetCard.data == null) continue;
 
                     targetCard.currentHealth -= unit.attack;
+                    Debug.Log($"{unit.name} 攻击 {targetCard.data.cardName}，造成 {unit.attack} 伤害，卡牌剩余 {targetCard.currentHealth}");
+
                     if (targetCard.currentHealth <= 0)
                     {
                         SendToGraveyard(targetCard);
@@ -248,8 +299,12 @@ public class CardGameManager : MonoBehaviour
                     }
                 }
             }
+
+            // 等待一小段时间，再让下一个单位攻击
             yield return new WaitForSeconds(0.4f);
         }
+
+        // 战斗结束，清理所有死卡
         CleanupDeadPlayerCards();
     }
 

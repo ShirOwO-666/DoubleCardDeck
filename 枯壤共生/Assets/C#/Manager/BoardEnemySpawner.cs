@@ -37,6 +37,8 @@ public class BoardEnemySpawner : MonoBehaviour
         gameManager.OnEnemySpawned += OnEnemySpawned;
         gameManager.OnEnemyAdvanced += OnEnemyAdvanced;
         gameManager.OnEnemyDied += OnEnemyDied;
+        // 订阅攻击事件
+        gameManager.OnUnitAttacked += OnUnitAttacked;
     }
 
     private void OnDestroy()
@@ -46,6 +48,7 @@ public class BoardEnemySpawner : MonoBehaviour
             gameManager.OnEnemySpawned -= OnEnemySpawned;
             gameManager.OnEnemyAdvanced -= OnEnemyAdvanced;
             gameManager.OnEnemyDied -= OnEnemyDied;
+            gameManager.OnUnitAttacked -= OnUnitAttacked; 
         }
     }
 
@@ -92,8 +95,24 @@ public class BoardEnemySpawner : MonoBehaviour
         go.transform.SetPositionAndRotation(end, targetRot);
     }
 
-    // 敌人死亡时，销毁对应视觉
-    private void OnEnemyDied(EnemyInstance enemy)
+    private void OnUnitAttacked(BoardSlot slot, bool isPlayer)
+    {
+        // 只处理敌人的攻击
+        if (isPlayer) return;
+
+        if (slot != null && slot.enemy != null && enemyViews.TryGetValue(slot.enemy, out GameObject go) && go != null)
+        {
+            // 给敌人临时挂一个动画脚本
+            CardAttackAnimator animator = go.GetComponent<CardAttackAnimator>();
+            if (animator == null)
+                animator = go.AddComponent<CardAttackAnimator>();
+
+            // 敌人朝屏幕外（Z负方向）冲
+            animator.PlayAttackAnimation(Vector3.back);
+        }
+    }
+// 敌人死亡时，销毁对应视觉
+private void OnEnemyDied(EnemyInstance enemy)
     {
         if (enemyViews.TryGetValue(enemy, out GameObject go))
         {
