@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -9,17 +9,24 @@ public class CardUI : MonoBehaviour,
     IPointerEnterHandler,
     IPointerExitHandler
 {
-    [Header("UI ����")]
+    [Header("UI 引用")]
     public Image backgroundImage;
     public Image artworkImage;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI costText;
     public TextMeshProUGUI descriptionText;
 
-    [Header("��ͣ����")]
-    public float hoverYOffset = 80f;      // ���ϸ���������
-    public float hoverScale = 1.15f;      // �Ŵ���
-    public float lerpSpeed = 10f;         // ��ֵ�ٶȣ�Խ��Խ��
+    [Header("悬停参数")]
+    public float hoverYOffset = 80f;      // 向上浮动的像素
+    public float hoverScale = 1.15f;      // 放大倍率
+    public float lerpSpeed = 10f;         // 插值速度，越大越快
+
+    [Header("悬停高亮")]
+    public bool enableHoverHighlight = true;        // 悬停时是否显示高亮描边
+    public Color hoverOutlineColor = new Color(1f, 0.95f, 0.55f, 1f); // 高亮描边颜色（偏暖白）
+    public float hoverOutlineDistance = 5f;         // 描边粗细（像素）
+
+    private Outline hoverOutline;   // 运行时添加的高亮描边组件
 
     public CardInstance Instance { get; private set; }
 
@@ -38,12 +45,21 @@ public class CardUI : MonoBehaviour,
         originalScale = rect.localScale;
         targetPos = originalPos;
         targetScale = originalScale;
+
+        // 给卡面背景挂一个描边效果，悬停时才启用（运行时创建，预制体无需修改）
+        if (enableHoverHighlight && backgroundImage != null)
+        {
+            hoverOutline = backgroundImage.gameObject.AddComponent<Outline>();
+            hoverOutline.effectColor = hoverOutlineColor;
+            hoverOutline.effectDistance = new Vector2(hoverOutlineDistance, -hoverOutlineDistance);
+            hoverOutline.enabled = false;
+        }
     }
 
     private void Update()
     {
-        // ƽ����ֵ��Ŀ��λ�ú�����
-        if (isDragging) return;   // ��קʱ����
+        // 平滑插值到目标位置和缩放
+        if (isDragging) return;   // 拖拽时不动
 
         rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition, targetPos, Time.deltaTime * lerpSpeed);
         rect.localScale = Vector3.Lerp(rect.localScale, targetScale, Time.deltaTime * lerpSpeed);
@@ -70,24 +86,30 @@ public class CardUI : MonoBehaviour,
         }
     }
 
-    // ===== ��ͣ =====
+    // ===== 悬停 =====
 
     public void OnPointerEnter(PointerEventData eventData)
     {
         targetPos = originalPos + new Vector2(0, hoverYOffset);
         targetScale = originalScale * hoverScale;
 
-        // �Ƶ���ǰ�棬���ⱻ��������ס
+        // 移到最前面，避免被其他卡挡住
         transform.SetAsLastSibling();
+
+        // 开启高亮描边
+        if (hoverOutline != null) hoverOutline.enabled = true;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         targetPos = originalPos;
         targetScale = originalScale;
+
+        // 关闭高亮描边
+        if (hoverOutline != null) hoverOutline.enabled = false;
     }
 
-    // HandManager ���к���ã�����ԭʼλ��
+    // HandManager 排列后调用，更新原始位置
     public void UpdateOriginalPosition(Vector2 pos, Vector3 scale)
     {
         originalPos = pos;

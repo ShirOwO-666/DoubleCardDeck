@@ -580,6 +580,9 @@ MonoBehaviour:
   hoverYOffset: 250
   hoverScale: 1.15
   lerpSpeed: 10
+  enableHoverHighlight: 1
+  hoverOutlineColor: {r: 0.4891767, g: 0.9811321, b: 0.47668213, a: 1}
+  hoverOutlineDistance: 5
   isDragging: 0
 --- !u!114 &5234718858757670417
 MonoBehaviour:
